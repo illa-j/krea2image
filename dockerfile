@@ -1,11 +1,38 @@
-FROM runpod/worker-comfyui:5.5.0-base
+FROM nvidia/cuda:12.4.1-devel-ubuntu22.04
 
+ARG DEBIAN_FRONTEND=noninteractive
 ARG HF_TOKEN=""
+
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/src
 
-# Avoid bash\r if editing on Windows
-RUN apt-get update && apt-get install -y dos2unix && rm -rf /var/lib/apt/lists/*
+# System deps (use nodesource for recent Node.js)
+RUN apt-get update && apt-get install -y \
+    git python3 python3-pip dos2unix wget curl \
+    libgl1 libglib2.0-0 libsm6 libxext6 libxrender-dev \
+    libffi-dev libssl-dev \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+# Symlinks
+RUN ln -sf /usr/bin/python3 /usr/bin/python && \
+    ln -sf /usr/bin/pip3 /usr/bin/pip
+
+# Install ComfyUI
+RUN git clone https://github.com/comfyanonymous/ComfyUI.git /comfyui
+WORKDIR /comfyui
+RUN pip install --no-cache-dir -r requirements.txt
+
+# PyTorch with CUDA 12.4 support (AFTER ComfyUI requirements to override if needed)
+RUN pip install --no-cache-dir \
+    torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
+
+# Install comfy-cli
+RUN pip install --no-cache-dir comfy-cli
+
+# Set ComfyUI path for comfy commands
+ENV COMFYUI_PATH=/comfyui
 
 # Custom nodes
 RUN comfy node install --exit-on-fail comfyui-krea2edit --mode remote
@@ -36,11 +63,14 @@ RUN set -eux; \
     download "https://huggingface.co/yufusoft/realism_engine_krea2_v3.1/resolve/main/realism_engine_krea2_v3.1.safetensors" \
              "models/loras" "realism_engine_krea2_v3.1.safetensors"
 
+# Install runpod serverless worker
+RUN pip install --no-cache-dir "runpod[all]"
+
 # Copy worker source
 COPY src/ /src/
 
-# Optional: if your scripts use these paths/files:
-COPY volume/extra_model_paths.yaml /volume/extra_model_paths.yaml
+# Copy model paths config to ComfyUI root (where it looks for it)
+COPY volume/extra_model_paths.yaml /comfyui/extra_model_paths.yaml
 COPY custom/ /custom/
 
 # Install python deps for handler
@@ -50,5 +80,6 @@ RUN pip install --no-cache-dir -r /src/requirements.txt
 RUN find /src -name '*.py' -exec dos2unix {} + && \
     dos2unix /src/start.sh && chmod +x /src/start.sh
 
-# Your start script should exec rp_handler.py after starting ComfyUI
+EXPOSE 8188
+
 CMD ["/src/start.sh"]
