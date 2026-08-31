@@ -1,4 +1,4 @@
-FROM runpod/worker-comfyui:5.8.4-base
+FROM runpod/worker-comfyui:5.5.0-base
 
 ARG HF_TOKEN=""
 ENV PYTHONUNBUFFERED=1
