@@ -35,7 +35,6 @@ RUN set -eux; \
              "models/loras" "krea2_thickness.safetensors"; \
     download "https://huggingface.co/yufusoft/realism_engine_krea2_v3.1/resolve/main/realism_engine_krea2_v3.1.safetensors" \
              "models/loras" "realism_engine_krea2_v3.1.safetensors"
-
 # Worker code + workflow
 COPY rp_handler.py /rp_handler.py
 COPY workflows/workflow_api.json /workflows/workflow_api.json
