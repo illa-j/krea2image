@@ -3,6 +3,10 @@ import json
 import requests
 import subprocess
 
+# NOTE: This script is a fallback/alternative installer. The primary installation
+# method is 'comfy node install' in the Dockerfile. This script is NOT called
+# automatically — run it manually only if you need an alternative install path.
+
 # Load JSON data from the file
 json_file_path = 'custom-files.json'  # Replace with the path to your JSON file
 with open(json_file_path, 'r') as json_file:

@@ -22,4 +22,4 @@ raise SystemExit(1)
 PY
 
 # Start Runpod handler (foreground)
-exec python3 -u /rp_handler.py
+exec python3 -u /src/rp_handler.py

@@ -46,8 +46,9 @@ COPY custom/ /custom/
 # Install python deps for handler
 RUN pip install --no-cache-dir -r /src/requirements.txt
 
-# Fix line endings + executable for start script
-RUN dos2unix /src/start.sh && chmod +x /src/start.sh
+# Fix line endings + executable for scripts
+RUN find /src -name '*.py' -exec dos2unix {} + && \
+    dos2unix /src/start.sh && chmod +x /src/start.sh
 
 # Your start script should exec rp_handler.py after starting ComfyUI
 CMD ["/src/start.sh"]

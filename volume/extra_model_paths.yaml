@@ -30,6 +30,8 @@ comfyui:
     configs: /runpod-volume/models/configs/
     loras: /runpod-volume/models/loras/
     vae: /runpod-volume/models/vae/
+    text_encoders: /runpod-volume/models/text_encoders/
+    diffusion_models: /runpod-volume/models/diffusion_models/
 
     # unet: /runpod-volume/models/unet/
     # clip: /runpod-volume/models/clip/

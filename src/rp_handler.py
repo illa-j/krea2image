@@ -23,7 +23,7 @@ def handler(job):
     # Load workflow (optional override)
     workflow_in = job_input.get("workflow")
     if workflow_in is None:
-        with open("/src/workflows/workflow_api.json", "r", encoding="utf-8") as f:
+        with open("/src/workflows/api-workflow.json", "r", encoding="utf-8") as f:
             workflow = json.load(f)
     else:
         workflow = utils.validate_json(workflow_in)
