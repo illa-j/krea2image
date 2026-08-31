@@ -2,15 +2,15 @@ FROM runpod/worker-comfyui:5.8.4-base
 
 ARG HF_TOKEN=""
 ENV PYTHONUNBUFFERED=1
-ENV PYTHONPATH=/
+ENV PYTHONPATH=/src
 
-# Optional but recommended to avoid bash\r issues if you edit scripts on Windows
+# Avoid bash\r if editing on Windows
 RUN apt-get update && apt-get install -y dos2unix && rm -rf /var/lib/apt/lists/*
 
 # Custom nodes
 RUN comfy node install --exit-on-fail comfyui-krea2edit --mode remote
 
-# Models
+# Models (download into the image)
 RUN set -eux; \
     BACKOFFS="10 20 30 60 90"; \
     download() { \
@@ -35,16 +35,19 @@ RUN set -eux; \
              "models/loras" "krea2_thickness.safetensors"; \
     download "https://huggingface.co/yufusoft/realism_engine_krea2_v3.1/resolve/main/realism_engine_krea2_v3.1.safetensors" \
              "models/loras" "realism_engine_krea2_v3.1.safetensors"
-# Worker code + workflow
-COPY rp_handler.py /rp_handler.py
-COPY workflows/workflow_api.json /workflows/workflow_api.json
-COPY requirements.txt /requirements.txt
-COPY start.sh /start.sh
-COPY comftroller.py uploader.py utils.py /
 
-RUN pip install --no-cache-dir -r /requirements.txt
+# Copy worker source
+COPY src/ /src/
 
-# Fix line endings + permissions
-RUN dos2unix /start.sh && chmod +x /start.sh
+# Optional: if your scripts use these paths/files:
+COPY volume/extra_model_paths.yaml /volume/extra_model_paths.yaml
+COPY custom/ /custom/
 
-CMD ["/start.sh"]
+# Install python deps for handler
+RUN pip install --no-cache-dir -r /src/requirements.txt
+
+# Fix line endings + executable for start script
+RUN dos2unix /src/start.sh && chmod +x /src/start.sh
+
+# Your start script should exec rp_handler.py after starting ComfyUI
+CMD ["/src/start.sh"]
