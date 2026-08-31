@@ -34,6 +34,10 @@ RUN pip install --no-cache-dir comfy-cli
 # Set ComfyUI path for comfy commands
 ENV COMFYUI_PATH=/comfyui
 
+# Install ComfyUI-Manager (required by comfy CLI)
+RUN git clone https://github.com/ltdrdata/ComfyUI-Manager.git /comfyui/custom_nodes/ComfyUI-Manager
+RUN cd /comfyui/custom_nodes/ComfyUI-Manager && pip install --no-cache-dir -r requirements.txt
+
 # Custom nodes
 RUN comfy node install --exit-on-fail comfyui-krea2edit --mode remote
 
