@@ -33,17 +33,26 @@ def handler(job):
     job_input = job["input"]  # input workflow
 
     # Validate inputs
+    # Validate inputs
     if job_input is None:
-        return utils.error(f"no 'input' property found on job data")
+        return utils.error("no 'input' property found on job data")
 
-    if job_input.get("workflow") is None:
-        return utils.error(f"no 'workflow' property found on job data")
+    if not isinstance(job_input, dict):
+        return utils.error("no 'input' property found on job data")
+
     
-    # if workflow is a string then validate will try convert to json
-    workflow = utils.validate_json(job_input.get("workflow"))
-    # ensure workflow is valid JSON:
-    if workflow is None:
-        return utils.error(f"'workflow' must be a valid JSON object or JSON-encoded string")
+    workflow_in = job_input.get("workflow")
+    
+    # workflow optional: if not provided, use bundled workflow
+    if workflow_in is None:
+        with open("/workflows/workflow_api.json", "r", encoding="utf-8") as f:
+            workflow = json.load(f)
+    else:
+        workflow = utils.validate_json(workflow_in)
+        if workflow is None:
+            return utils.error("'workflow' must be a valid JSON object or JSON-encoded string")
+
+
 
     bucket_creds = None # default, since we want to use ENV variable instead (if set) :)
 

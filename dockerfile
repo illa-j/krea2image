@@ -1,14 +1,16 @@
-# clean base image containing only comfyui, comfy-cli and comfyui-manager
 FROM runpod/worker-comfyui:5.8.4-base
 
 ARG HF_TOKEN=""
 ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/
 
-# --- Custom nodes ---
+# Optional but recommended to avoid bash\r issues if you edit scripts on Windows
+RUN apt-get update && apt-get install -y dos2unix && rm -rf /var/lib/apt/lists/*
+
+# Custom nodes
 RUN comfy node install --exit-on-fail comfyui-krea2edit --mode remote
 
-# --- Models (download into the image) ---
-# Note: these downloads can be large; expect longer build times and bigger image.
+# Models
 RUN set -eux; \
     BACKOFFS="10 20 30 60 90"; \
     download() { \
@@ -34,18 +36,16 @@ RUN set -eux; \
     download "https://huggingface.co/yufusoft/realism_engine_krea2_v3.1/resolve/main/realism_engine_krea2_v3.1.safetensors" \
              "models/loras" "realism_engine_krea2_v3.1.safetensors"
 
-# --- Serverless handler ---
-# You provide rp_handler.py that:
-#   - starts/uses ComfyUI (either launches it or talks to existing process)
-#   - loads your workflow JSON and injects inputs
-#   - queues prompt and returns images
+# Worker code + workflow
 COPY rp_handler.py /rp_handler.py
 COPY workflows/workflow_api.json /workflows/workflow_api.json
 COPY requirements.txt /requirements.txt
+COPY start.sh /start.sh
+COPY comftroller.py uploader.py utils.py /
 
-# Install handler deps
-RUN pip install --no-cache-dir -r /requirements.txt || \
-    pip install --no-cache-dir runpod requests
+RUN pip install --no-cache-dir -r /requirements.txt
 
-# Recommended: run handler directly; it can start ComfyUI or call its API.
-CMD ["python3", "-u", "/rp_handler.py"]
+# Fix line endings + permissions
+RUN dos2unix /start.sh && chmod +x /start.sh
+
+CMD ["/start.sh"]

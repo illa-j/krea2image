@@ -1,30 +1,25 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
-# Detect volume mount path (Pods often use /workspace, Serverless often uses /runpod-volume)
-if [ -d /runpod-volume/checkpoints ]; then
-  VOLUME=/runpod-volume
-elif [ -d /workspace/checkpoints ]; then
-  VOLUME=/workspace
-else
-  echo "ERROR: network volume not mounted (no checkpoints in /runpod-volume or /workspace)"
-  exit 1
-fi
+# Start ComfyUI in background
+# Base image usually has ComfyUI at /comfyui; if not, adjust.
+python3 /comfyui/main.py --listen 127.0.0.1 --port 8188 --disable-metadata --disable-auto-launch &
 
-echo "Using volume at: $VOLUME"
-find "$VOLUME" -mindepth 1 -maxdepth 2 -exec ls -d {} \; || true
+# Wait until ComfyUI is ready
+python3 - <<'PY'
+import time, requests
+url="http://127.0.0.1:8188/system_stats"
+for _ in range(120):
+    try:
+        r=requests.get(url, timeout=1)
+        if r.status_code == 200:
+            print("ComfyUI ready")
+            raise SystemExit(0)
+    except Exception:
+        time.sleep(1)
+print("ComfyUI did not become ready")
+raise SystemExit(1)
+PY
 
-# Link models into ComfyUI standard paths
-mkdir -p /comfyui/models
-rm -rf /comfyui/models/checkpoints /comfyui/models/clip /comfyui/models/loras /comfyui/models/vae
-
-ln -s "$VOLUME/checkpoints" /comfyui/models/checkpoints
-ln -s "$VOLUME/clip"        /comfyui/models/clip
-ln -s "$VOLUME/loras"       /comfyui/models/loras
-ln -s "$VOLUME/vae"         /comfyui/models/vae
-
-echo "runpod-worker-comfy: Starting ComfyUI"
-python3 /comfyui/main.py --disable-auto-launch --disable-metadata &
-
-echo "runpod-worker-comfy: Starting RunPod Handler"
-python3 -u /rp_handler.py
+# Start Runpod handler (foreground)
+exec python3 -u /rp_handler.py
