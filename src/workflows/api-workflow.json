@@ -1,0 +1,197 @@
+{
+  "1": {
+    "inputs": {
+      "images": [
+        "2",
+        0
+      ],
+      "filename_prefix": "Krea2"
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "SaveImage"
+    }
+  },
+  "2": {
+    "inputs": {
+      "samples": [
+        "4",
+        0
+      ],
+      "vae": [
+        "31",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAEDecode"
+    }
+  },
+  "4": {
+    "inputs": {
+      "model": ["66", 0],
+      "positive": ["64", 0],
+      "negative": ["65", 0],
+      "latent_image": ["69", 0],
+      "seed": 0,
+      "steps": 12,
+      "cfg": 1,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 0.9
+    },
+    "class_type": "KSampler",
+    "_meta": { "title": "KSampler" }
+  },
+  "31": {
+    "inputs": {
+      "vae_name": "krea2RealVae_v10.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "VAELoader"
+    }
+  },
+  "34": {
+    "inputs": {
+      "clip_name": "qwen3VL4BAbliteratedComfyui_v10.safetensors",
+      "type": "krea2",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "CLIPLoader"
+    }
+  },
+  "36": {
+    "inputs": {
+      "ckpt_name": "krea2TurboOfficialComfy_krea2TurboBf16.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "CheckpointLoaderSimple"
+    }
+  },
+  "64": {
+    "inputs": {
+      "clip": [
+        "34",
+        0
+      ],
+      "image": [
+        "68",
+        0
+      ]
+    },
+    "class_type": "Krea2EditGroundedEncode",
+    "_meta": {
+      "title": "Krea2EditGroundedEncode"
+    }
+  },
+  "65": {
+    "inputs": {
+      "clip": [
+        "34",
+        0
+      ],
+      "image": [
+        "68",
+        0
+      ]
+    },
+    "class_type": "Krea2EditGroundedEncode",
+    "_meta": {
+      "title": "Krea2EditGroundedEncode"
+    }
+  },
+  "66": {
+    "inputs": {
+      "model": [
+        "67",
+        0
+      ],
+      "source_latent": [
+        "69",
+        0
+      ],
+      "vae": [
+        "31",
+        0
+      ],
+      "source_image": [
+        "68",
+        0
+      ]
+    },
+    "class_type": "Krea2EditModelPatch",
+    "_meta": {
+      "title": "Krea2EditModelPatch"
+    }
+  },
+  "67": {
+    "inputs": {
+      "model": [
+        "71",
+        0
+      ],
+      "lora_name": "krea2_identity_edit_v1_2.safetensors",
+      "strength_model": 1
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "LoraLoaderModelOnly"
+    }
+  },
+  "68": {
+    "inputs": {
+      "image": "__INPUT_IMAGE__"
+    },
+    "class_type": "LoadImage",
+    "_meta": { "title": "LoadImage" }
+  },
+  "69": {
+    "inputs": {
+      "pixels": [
+        "68",
+        0
+      ],
+      "vae": [
+        "31",
+        0
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAEEncode"
+    }
+  },
+  "71": {
+    "inputs": {
+      "model": [
+        "72",
+        0
+      ],
+      "lora_name": "krea2_thickness.safetensors",
+      "strength_model": 0.59
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "Photorealistic NSFW LoRA — Right Click > Bypass"
+    }
+  },
+  "72": {
+    "inputs": {
+      "model": [
+        "36",
+        0
+      ],
+      "lora_name": "realism_engine_krea2_v3.1.safetensors",
+      "strength_model": 0.8
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "LoraLoaderModelOnly"
+    }
+  }
+}

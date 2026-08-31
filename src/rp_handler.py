@@ -2,135 +2,114 @@
 The main serverless worker module for runpod
 """
 
-# system lib imports
 import json
 import os
-
-# required lib imports
 import runpod
 
-# src imports
 import comftroller
 import uploader
-import utils 
+import utils
 
-# additional outputs logging. helpful for testing 
 LOG_JOB_OUTPUTS = True
 
+LOAD_IMAGE_NODE_ID = "68"   # LoadImage node in your workflow
+KSAMPLER_NODE_ID   = "4"    # KSampler node in your workflow
+
 def handler(job):
-    """
-    The main function that handles a job of generating an image.
-
-    This function validates the input, sends a prompt to ComfyUI for processing,
-    polls ComfyUI for result, and retrieves generated images.
-
-    Args:
-        job (dict): A dictionary containing job details and input parameters.
-
-    Returns:
-        dict: A dictionary containing either an error message or a success status with generated images.
-    """
-    job_input = job["input"]  # input workflow
-
-    # Validate inputs
-    # Validate inputs
-    if job_input is None:
-        return utils.error("no 'input' property found on job data")
-
+    job_input = job.get("input")
     if not isinstance(job_input, dict):
         return utils.error("no 'input' property found on job data")
 
-    
+    # Load workflow (optional override)
     workflow_in = job_input.get("workflow")
-    
-    # workflow optional: if not provided, use bundled workflow
     if workflow_in is None:
-        with open("/workflows/workflow_api.json", "r", encoding="utf-8") as f:
+        with open("/src/workflows/workflow_api.json", "r", encoding="utf-8") as f:
             workflow = json.load(f)
     else:
         workflow = utils.validate_json(workflow_in)
         if workflow is None:
             return utils.error("'workflow' must be a valid JSON object or JSON-encoded string")
 
+    # Require exactly 1 input image
+    input_files = job_input.get("files", [])
+    if not isinstance(input_files, list) or len(input_files) != 1:
+        return utils.error("Send exactly 1 image in input.files")
 
+    # Require seed from request
+    if "seed" not in job_input:
+        return utils.error("Missing required input.seed")
+    try:
+        seed = int(job_input["seed"])
+    except Exception:
+        return utils.error("input.seed must be an integer")
 
-    bucket_creds = None # default, since we want to use ENV variable instead (if set) :)
+    # Map image + seed into workflow
+    # LoadImage expects just the filename that exists in ComfyUI input folder
+    img_name = os.path.basename(input_files[0])
 
-    # validate that we can use 'aws' property 
+    try:
+        workflow[LOAD_IMAGE_NODE_ID]["inputs"]["image"] = img_name
+    except Exception as e:
+        return utils.error(f"Workflow is missing LoadImage node {LOAD_IMAGE_NODE_ID} or its inputs.image field: {e}")
+
+    try:
+        workflow[KSAMPLER_NODE_ID]["inputs"]["seed"] = seed
+    except Exception as e:
+        return utils.error(f"Workflow is missing KSampler node {KSAMPLER_NODE_ID} or its inputs.seed field: {e}")
+
+    # Optional: allow overriding some params if you want later
+    # if "steps" in job_input: workflow[KSAMPLER_NODE_ID]["inputs"]["steps"] = int(job_input["steps"])
+    # if "denoise" in job_input: workflow[KSAMPLER_NODE_ID]["inputs"]["denoise"] = float(job_input["denoise"])
+
+    bucket_creds = None
     custom_aws = utils.validate_json(job_input.get("tobucket"))
     if custom_aws is not None:
-        utils.log(f"will attempt to use 'tobucket' credentials from job input for aws upload")
-        bucket_creds = custom_aws # set bucket creds for uploader
-        custom_aws = None # no need to store any longer
+        utils.log("will attempt to use 'tobucket' credentials from job input for aws upload")
+        bucket_creds = custom_aws
 
-    # set callback for when comftroller processes incomming data
     update_progress = lambda data: runpod.serverless.progress_update(job, data)
-    # update_progress = utils.log
 
-    input_files = job_input.get("files", [])
-
-    # outputs is equal to the completed comfyui job id history object
     outputs = comftroller.run(workflow, input_files, update_progress)
+
     if LOG_JOB_OUTPUTS:
         utils.log("---- RAW OUTPUTS ----")
         utils.log(outputs)
         utils.log("")
 
-    # if 'run' had an error, then stop job and return error as result
-    if outputs.get('error'):
-        return outputs.get('error')
+    if outputs.get("error"):
+        return outputs.get("error")
 
-    # Fetching generated images
-    output_files = [] # array of output filepath/urls
-    output_datas = {} # dict of nont image output node datas as {"nodeid":{"outputdata":...}}
+    output_files = []
+    output_datas = {}
 
-    # uglry nesterd lewpz: el boo!
     for node_id, node_output in outputs.items():
-        # add output data to output_datas if not images or gifs data
         if not any(key in node_output for key in ["images", "gifs"]):
             output_datas[node_id] = outputs[node_id]
-        # scan job outputs for images/gifs (videos)
-        for key in ["images","gifs"]:
+
+        for key in ["images", "gifs"]:
             if key in node_output:
                 for data in node_output[key]:
-                    if data.get("type") == 'output':
+                    if data.get("type") == "output":
                         base = comftroller.GENERATION_OUTPUT_PATH
                         path = data["subfolder"] + data["filename"]
                         output_files.append(f"{base}/{path}")
 
-    # if you dont know what this does... you shouldnt be here.
     utils.log(f"#files generated: {len(output_files)}")
-    if LOG_JOB_OUTPUTS:
-        utils.log("---- OUTPUT DATAS ----")
-        utils.log(output_datas)
-        utils.log("")
 
-    # return an error if for some reason the files cant be found. 
-    # should never happen... but just in case <3
     for outfile in output_files:
         if not os.path.exists(outfile):
-            return utils.error(f"couldn't locate output file: {outfile} #sadface")
+            return utils.error(f"couldn't locate output file: {outfile}")
 
-    # log progress update to runpod so it knows we might take a moment to upload to aws
     update_progress({"saving-image-data": True})
 
-    # attempt to upload the generated files to aws, 
-    # send_to_aws returns (True, [file urls, ...]) or (False, [file paths, ...])
-    aws_uploaded, bucket_urls = uploader.send_to_aws(output_files, 'generations', bucket_creds)
+    aws_uploaded, bucket_urls = uploader.send_to_aws(output_files, "generations", bucket_creds)
 
-    # define return object 
-    job_result = {}
-    job_result["files"] = bucket_urls
-    job_result["datas"] = output_datas
+    job_result = {"files": bucket_urls, "datas": output_datas}
 
-    # convert generated image to base64 if not uploaded to aws and able
-    # !NOTE: RUNPOD HAS PAYLOAD LIMITS!! CANNOT RETURN BASE64 FOR MULTIPLE LARGE FILES!!!
-    if not aws_uploaded and utils.job_prop_to_bool(job_input, "tobase64"):
+    if (not aws_uploaded) and utils.job_prop_to_bool(job_input, "tobase64"):
         for index, local_file in enumerate(bucket_urls):
             job_result["files"][index] = utils.base64_encode(local_file)
 
     return job_result
 
-
-# Start the handler
 runpod.serverless.start({"handler": handler})
