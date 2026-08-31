@@ -34,38 +34,29 @@ RUN pip install --no-cache-dir comfy-cli
 # Set ComfyUI path for comfy commands
 ENV COMFYUI_PATH=/comfyui
 
-# Install ComfyUI-Manager (required by comfy CLI)
+# Install ComfyUI-Manager
 RUN git clone https://github.com/ltdrdata/ComfyUI-Manager.git /comfyui/custom_nodes/ComfyUI-Manager
 RUN cd /comfyui/custom_nodes/ComfyUI-Manager && pip install --no-cache-dir -r requirements.txt
 
-# Custom nodes
-RUN comfy node install --exit-on-fail comfyui-krea2edit --mode remote
+# Custom nodes (clone directly — more reliable than comfy CLI)
+RUN git clone https://github.com/lbouaraba/comfyui-krea2edit.git /comfyui/custom_nodes/comfyui-krea2edit
+RUN cd /comfyui/custom_nodes/comfyui-krea2edit && pip install --no-cache-dir -r requirements.txt || true
 
-# Models (download into the image)
-RUN set -eux; \
-    BACKOFFS="10 20 30 60 90"; \
-    download() { \
-      url="$1"; rel="$2"; fname="$3"; \
-      for i in 1 2 3 4 5; do \
-        HF_TOKEN="$HF_TOKEN" comfy model download --url "$url" --relative-path "$rel" --filename "$fname" && break; \
-        if [ "$i" -eq 5 ]; then echo "model-download failed after 5 attempts: $url" >&2; exit 1; fi; \
-        SLEEP=$(echo "$BACKOFFS" | cut -d ' ' -f "$i"); \
-        echo "model-download attempt $i failed; retrying in $SLEEP seconds" >&2; \
-        sleep "$SLEEP"; \
-      done; \
-    }; \
-    download "https://huggingface.co/artsyww/KREA2REALVAE/resolve/main/krea2RealVae_v10.safetensors" \
-             "models/vae" "krea2RealVae_v10.safetensors"; \
-    download "https://huggingface.co/alienmafio/my-krea2-loras/resolve/main/qwen3VL4BAbliteratedComfyui_v10.safetensors" \
-             "models/text_encoders" "qwen3VL4BAbliteratedComfyui_v10.safetensors"; \
-    download "https://huggingface.co/Comfy-Org/Krea-2/resolve/main/diffusion_models/krea2_turbo_bf16.safetensors" \
-             "models/checkpoints" "krea2TurboOfficialComfy_krea2TurboBf16.safetensors"; \
-    download "https://huggingface.co/conradlocke/krea2-identity-edit/resolve/main/krea2_identity_edit_v1_2.safetensors" \
-             "models/loras" "krea2_identity_edit_v1_2.safetensors"; \
-    download "https://huggingface.co/Kutches/Kr3a/resolve/main/krea2_thickness.safetensors" \
-             "models/loras" "krea2_thickness.safetensors"; \
-    download "https://huggingface.co/yufusoft/realism_engine_krea2_v3.1/resolve/main/realism_engine_krea2_v3.1.safetensors" \
-             "models/loras" "realism_engine_krea2_v3.1.safetensors"
+# Models (download directly with wget)
+RUN mkdir -p /comfyui/models/vae /comfyui/models/text_encoders \
+             /comfyui/models/checkpoints /comfyui/models/loras
+RUN wget -q --show-progress -O /comfyui/models/vae/krea2RealVae_v10.safetensors \
+    "https://huggingface.co/artsyww/KREA2REALVAE/resolve/main/krea2RealVae_v10.safetensors"
+RUN wget -q --show-progress -O /comfyui/models/text_encoders/qwen3VL4BAbliteratedComfyui_v10.safetensors \
+    "https://huggingface.co/alienmafio/my-krea2-loras/resolve/main/qwen3VL4BAbliteratedComfyui_v10.safetensors"
+RUN wget -q --show-progress -O /comfyui/models/checkpoints/krea2TurboOfficialComfy_krea2TurboBf16.safetensors \
+    "https://huggingface.co/Comfy-Org/Krea-2/resolve/main/diffusion_models/krea2_turbo_bf16.safetensors"
+RUN wget -q --show-progress -O /comfyui/models/loras/krea2_identity_edit_v1_2.safetensors \
+    "https://huggingface.co/conradlocke/krea2-identity-edit/resolve/main/krea2_identity_edit_v1_2.safetensors"
+RUN wget -q --show-progress -O /comfyui/models/loras/krea2_thickness.safetensors \
+    "https://huggingface.co/Kutches/Kr3a/resolve/main/krea2_thickness.safetensors"
+RUN wget -q --show-progress -O /comfyui/models/loras/realism_engine_krea2_v3.1.safetensors \
+    "https://huggingface.co/yufusoft/realism_engine_krea2_v3.1/resolve/main/realism_engine_krea2_v3.1.safetensors"
 
 # Install runpod serverless worker
 RUN pip install --no-cache-dir "runpod[all]"
