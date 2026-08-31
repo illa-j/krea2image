@@ -43,15 +43,32 @@ def handler(job):
     except Exception:
         return utils.error("input.seed must be an integer")
 
-    # Map image + seed into workflow
-    # LoadImage expects just the filename that exists in ComfyUI input folder
-    img_name = os.path.basename(input_files[0])
+    # Parse image input - support both dict {name, image} and plain base64
+    file_entry = input_files[0]
+    if isinstance(file_entry, dict):
+        # RunPod format: {"name": "image.png", "image": "data:image/png;base64,..."}
+        img_name = file_entry.get("name", "input.png")
+        base64_data = file_entry.get("image", "")
+        # Strip data URI prefix if present
+        if "," in base64_data:
+            base64_data = base64_data.split(",", 1)[1]
+    else:
+        # Plain base64 string format
+        img_name = "input.png"
+        base64_data = file_entry
+        if "," in base64_data:
+            base64_data = base64_data.split(",", 1)[1]
 
+    # Replace the input with normalized base64 for comftroller upload
+    input_files = [base64_data]
+
+    # Set image in LoadImage node - use upload-0.png since comftroller uploads with this name
     try:
-        workflow[LOAD_IMAGE_NODE_ID]["inputs"]["image"] = img_name
+        workflow[LOAD_IMAGE_NODE_ID]["inputs"]["image"] = "upload-0.png"
     except Exception as e:
         return utils.error(f"Workflow is missing LoadImage node {LOAD_IMAGE_NODE_ID} or its inputs.image field: {e}")
 
+    # Set seed in KSampler node
     try:
         workflow[KSAMPLER_NODE_ID]["inputs"]["seed"] = seed
     except Exception as e:

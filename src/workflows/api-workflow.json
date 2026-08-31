@@ -1,32 +1,17 @@
 {
   "1": {
     "inputs": {
-      "images": [
-        "2",
-        0
-      ],
+      "images": ["2", 0],
       "filename_prefix": "Krea2"
     },
-    "class_type": "SaveImage",
-    "_meta": {
-      "title": "SaveImage"
-    }
+    "class_type": "SaveImage"
   },
   "2": {
     "inputs": {
-      "samples": [
-        "4",
-        0
-      ],
-      "vae": [
-        "31",
-        0
-      ]
+      "samples": ["4", 0],
+      "vae": ["31", 0]
     },
-    "class_type": "VAEDecode",
-    "_meta": {
-      "title": "VAEDecode"
-    }
+    "class_type": "VAEDecode"
   },
   "4": {
     "inputs": {
@@ -41,157 +26,94 @@
       "scheduler": "simple",
       "denoise": 0.9
     },
-    "class_type": "KSampler",
-    "_meta": { "title": "KSampler" }
+    "class_type": "KSampler"
   },
   "31": {
     "inputs": {
       "vae_name": "krea2RealVae_v10.safetensors"
     },
-    "class_type": "VAELoader",
-    "_meta": {
-      "title": "VAELoader"
-    }
+    "class_type": "VAELoader"
   },
   "34": {
     "inputs": {
       "clip_name": "qwen3VL4BAbliteratedComfyui_v10.safetensors",
-      "type": "krea2",
       "device": "default"
     },
-    "class_type": "CLIPLoader",
-    "_meta": {
-      "title": "CLIPLoader"
-    }
+    "class_type": "CLIPLoader"
   },
   "36": {
     "inputs": {
       "ckpt_name": "krea2TurboOfficialComfy_krea2TurboBf16.safetensors"
     },
-    "class_type": "CheckpointLoaderSimple",
-    "_meta": {
-      "title": "CheckpointLoaderSimple"
-    }
+    "class_type": "CheckpointLoaderSimple"
   },
   "64": {
     "inputs": {
-      "clip": [
-        "34",
-        0
-      ],
-      "image": [
-        "68",
-        0
-      ]
+      "clip": ["34", 0],
+      "image": ["68", 0],
+      "prompt": "The exact same person from the reference image is completely nude, fully naked, no clothes, no fabric, bare skin only. Preserve their exact face, facial features, hair, body shape, proportions, skin tone, pose, and identity with perfect fidelity. Natural realistic skin texture, accurate anatomy, detailed lighting and shadows.",
+      "grounding_px": 768,
+      "system_prompt": ""
     },
-    "class_type": "Krea2EditGroundedEncode",
-    "_meta": {
-      "title": "Krea2EditGroundedEncode"
-    }
+    "class_type": "Krea2EditGroundedEncode"
   },
   "65": {
     "inputs": {
-      "clip": [
-        "34",
-        0
-      ],
-      "image": [
-        "68",
-        0
-      ]
+      "clip": ["34", 0],
+      "image": ["68", 0],
+      "prompt": "clothes, clothing, fabric, bra, panties, underwear, dressed, clothed, covered, residual fabric, censored, blurred, mosaic, deformed face, changed face, different person, bad anatomy, extra limbs, mutated hands, blurry, low quality, artifacts, watermark, text",
+      "grounding_px": 768,
+      "system_prompt": ""
     },
-    "class_type": "Krea2EditGroundedEncode",
-    "_meta": {
-      "title": "Krea2EditGroundedEncode"
-    }
+    "class_type": "Krea2EditGroundedEncode"
   },
   "66": {
     "inputs": {
-      "model": [
-        "67",
-        0
-      ],
-      "source_latent": [
-        "69",
-        0
-      ],
-      "vae": [
-        "31",
-        0
-      ],
-      "source_image": [
-        "68",
-        0
-      ]
+      "model": ["67", 0],
+      "source_latent": ["69", 0],
+      "vae": ["31", 0],
+      "source_image": ["68", 0],
+      "ref_boost": 2,
+      "ref_boost_a": 1,
+      "fit_mode": "fit"
     },
-    "class_type": "Krea2EditModelPatch",
-    "_meta": {
-      "title": "Krea2EditModelPatch"
-    }
+    "class_type": "Krea2EditModelPatch"
   },
   "67": {
     "inputs": {
-      "model": [
-        "71",
-        0
-      ],
+      "model": ["71", 0],
       "lora_name": "krea2_identity_edit_v1_2.safetensors",
       "strength_model": 1
     },
-    "class_type": "LoraLoaderModelOnly",
-    "_meta": {
-      "title": "LoraLoaderModelOnly"
-    }
+    "class_type": "LoraLoaderModelOnly"
   },
   "68": {
     "inputs": {
       "image": "__INPUT_IMAGE__"
     },
-    "class_type": "LoadImage",
-    "_meta": { "title": "LoadImage" }
+    "class_type": "LoadImage"
   },
   "69": {
     "inputs": {
-      "pixels": [
-        "68",
-        0
-      ],
-      "vae": [
-        "31",
-        0
-      ]
+      "pixels": ["68", 0],
+      "vae": ["31", 0]
     },
-    "class_type": "VAEEncode",
-    "_meta": {
-      "title": "VAEEncode"
-    }
+    "class_type": "VAEEncode"
   },
   "71": {
     "inputs": {
-      "model": [
-        "72",
-        0
-      ],
+      "model": ["72", 0],
       "lora_name": "krea2_thickness.safetensors",
       "strength_model": 0.59
     },
-    "class_type": "LoraLoaderModelOnly",
-    "_meta": {
-      "title": "Photorealistic NSFW LoRA — Right Click > Bypass"
-    }
+    "class_type": "LoraLoaderModelOnly"
   },
   "72": {
     "inputs": {
-      "model": [
-        "36",
-        0
-      ],
+      "model": ["36", 0],
       "lora_name": "realism_engine_krea2_v3.1.safetensors",
       "strength_model": 0.8
     },
-    "class_type": "LoraLoaderModelOnly",
-    "_meta": {
-      "title": "LoraLoaderModelOnly"
-    }
+    "class_type": "LoraLoaderModelOnly"
   }
 }
